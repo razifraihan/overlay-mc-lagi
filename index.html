@@ -351,13 +351,18 @@ var CONFIG = {
     var W = wrap.clientWidth, H = wrap.clientHeight;
     var s = Math.min(W/1920, H/1080);
     if(s > 0.97 && s < 1.03) s = 1;
+    if(/debug/.test(location.hash)){
+      var d=document.getElementById("dbg");
+      if(!d){d=document.createElement("div");d.id="dbg";d.style.cssText="position:fixed;left:8px;top:8px;z-index:99999;background:#ff0;color:#000;font:700 22px monospace;padding:6px 10px;border:3px solid #000";document.body.appendChild(d);}
+      d.textContent="RENDER "+innerWidth+"x"+innerHeight+" @"+devicePixelRatio+"x";
+    }
     stage.style.transform = "none";
     stage.style.transformOrigin = "0 0";
     stage.style.zoom = s;                       /* dirender langsung di resolusi akhir = tajam */
     stage.style.left = Math.round((W - 1920*s)/2 / s) + "px";
     stage.style.top  = Math.round((H - 1080*s)/2 / s) + "px";
   }
-  function mode(){ document.body.classList.toggle("bare", location.hash === "#stream"); fit(); }
+  function mode(){ document.body.classList.toggle("bare", /stream/.test(location.hash)); fit(); }
   window.addEventListener("resize", fit);
   window.addEventListener("hashchange", mode);
   mode();
