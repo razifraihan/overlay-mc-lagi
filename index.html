@@ -21,8 +21,7 @@
 html,body{height:100%}
 body{
   margin:0;box-sizing:border-box;padding-block:0;
-  padding-left:max(16px,env(safe-area-inset-left,0px));
-  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-left:0;padding-right:0;
   background:var(--paper);color:var(--ink);
   font-family:var(--font-body);overflow:hidden;
 }
@@ -221,6 +220,11 @@ html,body{background:transparent!important}
 .frame{background:transparent!important}
 .frame .inner{background:transparent!important}
 .hint{display:none!important}
+/* ---- ketajaman HD ---- */
+html,body{-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+.stage{backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.portrait img{image-rendering:auto;will-change:transform;transform:translateZ(0)}
+.portrait.hop img{transform:none}
 </style>
 
 <div class="wrap" id="wrap">
@@ -348,7 +352,12 @@ var CONFIG = {
 
   function fit(){
     var s = Math.min(wrap.clientWidth/1920, wrap.clientHeight/1080);
-    stage.style.transform = "translate(-50%,-50%) scale(" + s + ")";
+    if(s > 0.97 && s < 1.03) s = 1;           /* skala 1:1 = paling tajam */
+    var ox = Math.round((wrap.clientWidth - 1920*s)/2);
+    var oy = Math.round((wrap.clientHeight - 1080*s)/2);
+    stage.style.left = "0"; stage.style.top = "0";
+    stage.style.transformOrigin = "0 0";
+    stage.style.transform = "translate(" + ox + "px," + oy + "px) scale(" + s + ")";
   }
   function mode(){ document.body.classList.toggle("bare", location.hash === "#stream"); fit(); }
   window.addEventListener("resize", fit);
