@@ -19,6 +19,18 @@
 html,body{margin:0;height:100%}
 body{background:var(--ink);color:var(--cream);font-family:var(--type);overflow:hidden;-webkit-font-smoothing:antialiased}
 body.bare{background:transparent}
+#panelui{display:none}
+body.panel{background:#14110f;overflow:auto;display:block!important;height:auto!important;min-height:100vh}
+body.panel .stage{display:none}
+body.panel #panelui{display:block;max-width:560px;margin:0 auto;padding:14px;color:#efe5cf;font-family:Anton,Impact,sans-serif}
+#panelui h2{margin:0 0 4px;font:400 26px Anton,Impact,sans-serif;letter-spacing:.04em}
+#panelui p{margin:0 0 12px;font:400 13px "Courier New",monospace;opacity:.7}
+#panelui .g{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+#panelui button{font:400 44px Anton,Impact,sans-serif;padding:16px 0;background:#14110f;color:#efe5cf;border:3px solid #efe5cf;cursor:pointer}
+#panelui button:active{background:#f2b807;color:#14110f}
+#panelui .u{grid-column:span 2;font-size:26px;border-color:#f2b807;color:#f2b807}
+#panelui .r{grid-column:span 2;font-size:26px;border-color:#d93a2b;color:#d93a2b}
+#panelui #plist{margin-top:14px;font:400 22px "Courier New",monospace;letter-spacing:.1em}
 .wrap{position:relative;width:100%;height:100%;overflow:hidden}
 .stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden}
 
@@ -144,6 +156,7 @@ body.bare .holefill{display:none}
   <div class="strip t"></div><div class="strip b"></div><div class="strip l"></div><div class="strip r"></div>
 
   <!-- Taruh sumber game tepat di sini: x 56, y 128, ukuran 1344 x 752 -->
+  <div id="panelui"><h2>PANEL INPUT · MC LAGI</h2><p>Tap angka = posisi akhir match</p><div class="g" id="pgrid"></div><div id="plist"></div></div>
   <div class="holefill">
     <h4>AREA GAME &middot; 1344 &times; 752</h4>
     <div class="pad" id="pad"></div>
@@ -225,7 +238,7 @@ var CONFIG = {
     stage.style.left = Math.round((W - 1920*s)/2/s) + "px";
     stage.style.top  = Math.round((H - 1080*s)/2/s) + "px";
   }
-  function mode(){ document.body.classList.toggle("bare", /stream/.test(location.hash)); fit(); }
+  function mode(){ document.body.classList.toggle("bare", /stream/.test(location.hash)); document.body.classList.toggle("panel", /panel/.test(location.hash)); fit(); }
   window.addEventListener("resize", fit);
   window.addEventListener("hashchange", mode);
   mode();
@@ -252,7 +265,11 @@ var CONFIG = {
     if(o && Array.isArray(o.p) && (!CONFIG.resetDaily || o.d === today())) P = o.p;
   }catch(e){}
   if(!P) P = (CONFIG.placements || []).slice();
-  function save(){ try{ localStorage.setItem(KEY, JSON.stringify({d:today(), p:P})); }catch(e){} }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify({d:today(), p:P})); }catch(e){} try{ if(window.BroadcastChannel) bc.postMessage("u"); }catch(e){} }
+  function reload(){
+    try{ var o = JSON.parse(localStorage.getItem(KEY)); if(o && Array.isArray(o.p)) P = o.p; }catch(e){}
+  }
+  var bc = null; try{ if(window.BroadcastChannel) bc = new BroadcastChannel("mclagi"); }catch(e){}
 
   function pop(el){ el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
 
@@ -287,11 +304,15 @@ var CONFIG = {
   }
   function add(v){
     if(v < 1 || v > 8) return;
-    P.push(v); save(); render(true);
+    reload(); P.push(v); save(); render(true);
     var por = $("portrait"); por.classList.remove("hop"); void por.offsetWidth; por.classList.add("hop");
   }
-  function undo(){ P.pop(); save(); render(false); }
+  function undo(){ reload(); P.pop(); save(); render(false); }
   function reset(){ P = []; save(); render(false); }
+  function sync(){ var n = P.length; reload(); render(P.length > n); }
+  window.addEventListener("storage", function(e){ if(e.key === KEY) sync(); });
+  if(bc) bc.onmessage = sync;
+  setInterval(function(){ try{ var o = JSON.parse(localStorage.getItem(KEY)); if(o && JSON.stringify(o.p) !== JSON.stringify(P)) sync(); }catch(e){} }, 1000);
 
   var pad = $("pad");
   for(var k = 1; k <= 8; k++){
@@ -302,12 +323,20 @@ var CONFIG = {
   }
   var ub = document.createElement("button"); ub.className = "u"; ub.textContent = "UNDO"; ub.onclick = undo; pad.appendChild(ub);
 
+  document.body.appendChild($("panelui"));
+  var pg = $("pgrid");
+  for(var q = 1; q <= 8; q++){ (function(q){ var b = document.createElement("button"); b.textContent = q; b.onclick = function(){ add(q); }; pg.appendChild(b); })(q); }
+  var pu = document.createElement("button"); pu.className = "u"; pu.textContent = "UNDO"; pu.onclick = undo; pg.appendChild(pu);
+  var pr = document.createElement("button"); pr.className = "r"; pr.textContent = "RESET"; pr.onclick = function(){ if(confirm("Reset semua riwayat?")) reset(); }; pg.appendChild(pr);
+
   window.addEventListener("keydown", function(e){
     if(e.ctrlKey || e.metaKey || e.altKey) return;
     if(/^[1-8]$/.test(e.key)) add(+e.key);
     else if(e.key === "z" || e.key === "Z" || e.key === "Backspace") undo();
     else if(e.key === "R") reset();
   });
+  var origRender = render;
+  render = function(n){ origRender(n); $("plist").textContent = P.length ? P.slice(-8).join("  ") : "-"; };
   render(false);
 
   /* ---------- ticker ---------- */
