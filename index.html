@@ -391,24 +391,7 @@ var CONFIG = {
   }
   if(/debug/.test(location.hash)){ var dv = document.getElementById("dbgov"); dv.style.display = "block"; setInterval(function(){ document.getElementById("dbgst2").textContent = ST; }, 500); }
   showST();
-  function applyMsg(raw){
-    try{
-      var o = JSON.parse(raw);
-      if(!o || !Array.isArray(o.p) || !(o.t > T)) return;
-      if(CONFIG.resetDaily && o.d !== today()) return;
-      T = o.t; P = o.p;
-      try{ localStorage.setItem(KEY, JSON.stringify({d:today(), p:P, t:T})); }catch(e){}
-      render(true);
-    }catch(e){}
-  }
-  var retry = 5000, es = null;
-  function stream(){
-    try{ es = new EventSource(URL_R + "/sse?since=all"); }catch(e){ setST("SSE tidak didukung"); return; }
-    es.onopen = function(){ retry = 5000; setST("tersambung (live)"); };
-    es.onmessage = function(ev){ try{ var j = JSON.parse(ev.data); if(j.event === "message") applyMsg(j.message); }catch(e){} };
-    es.onerror = function(){ try{ es.close(); }catch(e){} setST("putus, coba lagi " + Math.round(retry/1000) + " dtk"); setTimeout(stream, retry); retry = Math.min(retry*2, 60000); };
-  }
-  if(ROOM){ if(/panel/.test(location.hash)) pull(); else stream(); }
+  if(ROOM){ setInterval(pull, 2500); pull(); }
 
   function sync(){ var n = P.length; reload(); render(P.length > n); }
   window.addEventListener("storage", function(e){ if(e.key === KEY) sync(); });
